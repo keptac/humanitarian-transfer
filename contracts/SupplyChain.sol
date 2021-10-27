@@ -2,9 +2,8 @@
 pragma solidity >=0.5.16 <0.9.0;
 
 contract SupplyChain {
-
   // <owner>
-  address public owner = msg.sender;
+  address public owner;
 
   // <skuCount>
   uint public skuCount;
@@ -76,8 +75,15 @@ contract SupplyChain {
   }
 
   function addItem(string memory _name, uint _price) public returns (bool) {
-    Item[] memory products = new Item[](7);
-    products[skuCount] = Item(_name, skuCount, _price, State.ForSale, payable(msg.sender), payable(address(0)));
+
+    items[skuCount] = Item({
+      name: _name, 
+      sku: skuCount, 
+      price: _price, 
+      state: State.ForSale, 
+      seller: payable(msg.sender), 
+      buyer: payable(address(0))
+     });
     
     skuCount ++;
 
@@ -96,10 +102,8 @@ contract SupplyChain {
     emit LogShipped(sku);
   }
 
-  function receiveItem(uint sku) public  shipped(sku) verifyCaller(items[sku].seller){
-    Item storage product = items[sku];
-
-    product.state = State.Received;
+  function receiveItem(uint sku) public  shipped(sku) verifyCaller(items[sku].buyer){
+    items[sku].state = State.Received;
     emit LogReceived(sku);
   }
 
