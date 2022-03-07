@@ -41,7 +41,7 @@ contract HumanitarianTransfer {
       address payable merchantAccount;
     }
 
-  event LogRequestInitiliazed(uint donationId, string _implementingPartnerName, uint amount);
+  event LogRequestInitiliazed(uint donationId, string implementationPartner, uint amount);
   event LogApproved(uint donationId, string approver);
   event LogVoucherIssued(uint voucherIdCount, string beneficiaryname);
   event LogUsed(uint voucherId);
@@ -104,7 +104,7 @@ contract HumanitarianTransfer {
       donationBalance: _amount,
       vouchersCount: 0,
       state: State.Pending, 
-      unicefSuspenseAccount: payable(owner),
+      unicefSuspenseAccount: payable(msg.sender),
       partnerAccount: payable(_partnerAccount)
     });
     
@@ -164,7 +164,7 @@ contract HumanitarianTransfer {
       emit LogUsed(voucherId);
     }
 
-    /// @notice disburses the redeemed amount into merchant account from the IP acount
+    /// @notice reimburses the redeemed amount into merchant account from the IP acount
     /// @param voucherId is the voucher id
     /// @dev needs improvement on transferig money from IP account to Merchant account.
     function redeemVoucher(uint voucherId) public{
@@ -181,12 +181,12 @@ contract HumanitarianTransfer {
     }
 
    function fetchDonations(uint _donationId) public view  
-     returns (string memory implementingPartner, uint donationId, uint amount, uint state, address unicefSuspenseAccount, address partnerAccount)  
+     returns (string memory implementingPartner, uint donationId, uint amount, State state, address unicefSuspenseAccount, address partnerAccount)  
    { 
      implementingPartner = donations[_donationId].implementingPartner; 
      donationId = donations[_donationId].donationId; 
      amount = donations[_donationId].amount; 
-     state = uint(donations[_donationId].state); 
+     state = donations[_donationId].state; 
      unicefSuspenseAccount = donations[_donationId].unicefSuspenseAccount; 
      partnerAccount = donations[_donationId].partnerAccount; 
      return (implementingPartner, donationId, amount, state, unicefSuspenseAccount, partnerAccount); 

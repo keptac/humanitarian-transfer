@@ -1,7 +1,7 @@
 let BN = web3.utils.BN;
 let HumanitarianTransfer = artifacts.require("HumanitarianTransfer");
 let { catchRevert } = require("./exceptionsHelpers.js");
-const { items: ItemStruct, isDefined, isPayable, isType } = require("./ast-helper");
+const { items: RequestDonationStruct, isDefined, isPayable, isType } = require("./ast-helper");
 
 contract("HumanitarianTransfer", function (accounts) {
   const [_owner, unicefSuspenseAccount, partnerAccount, merchantAccount] = accounts;
@@ -9,7 +9,7 @@ contract("HumanitarianTransfer", function (accounts) {
 
   const amount = "1000";
   const excessAmount = "2000";
-  const implementingPartner = "book";
+  const implementingPartner = "AKDN";
 
   let instance;
 
@@ -63,7 +63,7 @@ contract("HumanitarianTransfer", function (accounts) {
       let subjectStruct;
 
       before(() => {
-        subjectStruct = ItemStruct(HumanitarianTransfer);
+        subjectStruct = RequestDonationStruct(HumanitarianTransfer);
         assert(
           subjectStruct !== null, 
           "The contract should define an `RequestDonation Struct`"
@@ -94,7 +94,7 @@ contract("HumanitarianTransfer", function (accounts) {
 
       it("should have a `amount`", () => {
         assert(
-          isDefined(subjectStruct)("priamountce"), 
+          isDefined(subjectStruct)("amount"), 
           "Struct RequestDonation should have a `amount` member"
         );
         assert(
@@ -113,16 +113,16 @@ contract("HumanitarianTransfer", function (accounts) {
           "`state` should be of type `State`"
         );
       });
-
-
     });
   });
 
   describe("Use cases", () => {
-    it("should add an donation with the provided implementingPartner and amouunt", async () => {
+    it("should add a donation with the provided implementingPartner and amount", async () => {
       await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
 
       const result = await instance.fetchDonations.call(0);
+
+      console.log(result[0]);
 
       assert.equal(
         result[0],
@@ -137,17 +137,17 @@ contract("HumanitarianTransfer", function (accounts) {
       assert.equal(
         result[3].toString(10),
         HumanitarianTransfer.State.Pending,
-        'the state of the donation should be "For Sale"',
+        'the state of the donation should be "Pending"',
       );
       assert.equal(
         result[4],
         unicefSuspenseAccount,
-        "the address adding the donation should be listed as the seller",
+        "the address adding the donation should be listed as UNICEF account",
       );
       assert.equal(
         result[5],
-        emptyAddress,
-        "the beneficiary address should be set to 0 when an donation is added",
+        partnerAccount,
+        "the beneficiary address does not match the expected address.",
       );
     });
 
