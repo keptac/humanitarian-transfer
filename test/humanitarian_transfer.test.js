@@ -4,7 +4,7 @@ let { catchRevert } = require("./exceptionsHelpers.js");
 const { items: ItemStruct, isDefined, isPayable, isType } = require("./ast-helper");
 
 contract("HumanitarianTransfer", function (accounts) {
-  const [_owner, alice, bob] = accounts;
+  const [_owner, unicefAccount, partnerAccount, merchantAccount] = accounts;
   const emptyAddress = "0x0000000000000000000000000000000000000000";
 
   const amount = "1000";
@@ -120,7 +120,7 @@ contract("HumanitarianTransfer", function (accounts) {
 
   describe("Use cases", () => {
     it("should add an donation with the provided implementingPartner and amouunt", async () => {
-      await instance.requestDonations(implementingPartner, amount, bob, { from: alice });
+      await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefAccount });
 
       const result = await instance.fetchDonations.call(0);
 
@@ -141,7 +141,7 @@ contract("HumanitarianTransfer", function (accounts) {
       );
       assert.equal(
         result[4],
-        alice,
+        unicefAccount,
         "the address adding the donation should be listed as the seller",
       );
       assert.equal(
@@ -153,7 +153,7 @@ contract("HumanitarianTransfer", function (accounts) {
 
     it("should emit a LogRequestInitiliazed event when an donation is added", async () => {
       let eventEmitted = false;
-      const tx = await instance.requestDonations(implementingPartner, amount, { from: alice });
+      const tx = await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
 
       if (tx.logs[0].event == "LogRequestInitiliazed") {
         eventEmitted = true;
@@ -167,14 +167,14 @@ contract("HumanitarianTransfer", function (accounts) {
     });
 
     it("should allow someone to issue a Approve a donaton and update state accordingly", async () => {
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      var aliceBalanceBefore = await web3.eth.getBalance(alice);
-      var bobBalanceBefore = await web3.eth.getBalance(bob);
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      var aliceBalanceBefore = await web3.eth.getBalance(unicefAccount);
+      var bobBalanceBefore = await web3.eth.getBalance(partnerAccount);
 
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
 
-      var aliceBalanceAfter = await web3.eth.getBalance(alice);
-      var bobBalanceAfter = await web3.eth.getBalance(bob);
+      var aliceBalanceAfter = await web3.eth.getBalance(unicefAccount);
+      var bobBalanceAfter = await web3.eth.getBalance(partnerAccount);
 
       const result = await instance.fetchDonations.call(0);
 
@@ -186,20 +186,20 @@ contract("HumanitarianTransfer", function (accounts) {
 
       assert.equal(
         result[5],
-        bob,
-        "the beneficiary address should be set bob when he purchases an donation",
+        partnerAccount,
+        "the beneficiary address should be set partnerAccount when he purchases an donation",
       );
 
       assert.equal(
         new BN(aliceBalanceAfter).toString(),
         new BN(aliceBalanceBefore).add(new BN(amount)).toString(),
-        "alice's balance should be increased by the amount of the donation",
+        "unicefAccount's balance should be increased by the amount of the donation",
       );
 
       assert.isBelow(
         Number(bobBalanceAfter),
         Number(new BN(bobBalanceBefore).sub(new BN(amount))),
-        "bob's balance should be reduced by more than the amount of the donation (including gas costs)",
+        "partnerAccount's balance should be reduced by more than the amount of the donation (including gas costs)",
       );
     });
 
@@ -207,8 +207,8 @@ contract("HumanitarianTransfer", function (accounts) {
     it("should emit LogApproved event when and donation is approved", async () => {
       var eventEmitted = false;
 
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      const tx = await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      const tx = await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
 
       if (tx.logs[0].event == "LogApproved") {
         eventEmitted = true;
@@ -218,15 +218,15 @@ contract("HumanitarianTransfer", function (accounts) {
     });
 
     it("should revert when someone that is not the seller tries to call issueVouchers()", async () => {
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: amount });
-      await catchRevert(instance.issueVouchers(0, { from: bob }));
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: amount });
+      await catchRevert(instance.issueVouchers(0, { from: partnerAccount }));
     });
 
     it("should allow the seller to mark the donation as issued", async () => {
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
-      await instance.issueVouchers(0, { from: alice });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
+      await instance.issueVouchers(0, { from: unicefAccount });
 
       const result = await instance.fetchDonations.call(0);
 
@@ -240,9 +240,9 @@ contract("HumanitarianTransfer", function (accounts) {
     it("should emit a LogVoucherIssued event when an donation is issued", async () => {
       var eventEmitted = false;
 
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
-      const tx = await instance.issueVouchers(0, { from: alice });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
+      const tx = await instance.issueVouchers(0, { from: unicefAccount });
 
       if (tx.logs[0].event == "LogVoucherIssued") {
         eventEmitted = true;
@@ -256,10 +256,10 @@ contract("HumanitarianTransfer", function (accounts) {
     });
 
     it("should allow the beneficiary to mark the donation as used by beneficiary", async () => {
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
-      await instance.issueVouchers(0, { from: alice });
-      await instance.useVoucher(0, { from: bob });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
+      await instance.issueVouchers(0, { from: unicefAccount });
+      await instance.useVoucher(0, { from: partnerAccount });
 
       const result = await instance.fetchDonations.call(0);
 
@@ -271,20 +271,20 @@ contract("HumanitarianTransfer", function (accounts) {
     });
 
     it("should revert if an address other than the beneficiary calls useVoucher()", async () => {
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
-      await instance.issueVouchers(0, { from: alice });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
+      await instance.issueVouchers(0, { from: unicefAccount });
 
-      await catchRevert(instance.useVoucher(0, { from: alice }));
+      await catchRevert(instance.useVoucher(0, { from: unicefAccount }));
     });
 
     it("should emit a LogReceived event when an donation is received", async () => {
       var eventEmitted = false;
 
-      await instance.requestDonations(implementingPartner, amount, { from: alice });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: bob, value: excessAmount });
-      await instance.issueVouchers(0, { from: alice });
-      const tx = await instance.useVoucher(0, { from: bob });
+      await instance.requestDonations(implementingPartner, amount, { from: unicefAccount });
+      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
+      await instance.issueVouchers(0, { from: unicefAccount });
+      const tx = await instance.useVoucher(0, { from: partnerAccount });
 
       if (tx.logs[0].event == "LogReceived") {
         eventEmitted = true;

@@ -4,7 +4,7 @@ pragma solidity >=0.5.16 <0.9.0;
 /// @title HumanitarianTransfer
 /// @author Kelvin Chelenje
 /// @dev This contract is to request funds from Unicef and disburse the received funds to beneficiaries as vouchers.
-/// The vouchers can later be redeemed by merchants when the beneficiaries purchase using the vouchers
+/// The vouchers can later be redeemed by merchants when the beneficiaries purchase using the vouchers. Includes the tests
 
 contract HumanitarianTransfer {
   address public owner;
@@ -15,7 +15,7 @@ contract HumanitarianTransfer {
   mapping (address => uint) public merchantBalance ;
   
   /// @notice These are states that describe the progress of each voucher or funds issued.
-  enum State{ Pending, Approved, VoucherIsued, Used, Redeemed }
+  enum State{ Pending, Approved, Rejected, VoucherIsued, Used, Redeemed }
 
   /// @notice This is a struct to represent the funds provided by	UNICEF initially.  
   struct RequestDonation{
@@ -41,7 +41,7 @@ contract HumanitarianTransfer {
       address payable merchantAccount;
     }
 
-  event LogRequestInitiliazed(uint donationId);
+  event LogRequestInitiliazed(uint donationId, string _implementingPartnerName, uint amount);
   event LogApproved(uint donationId, string approver);
   event LogVoucherIssued(uint voucherIdCount);
   event LogUsed(uint voucherId);
@@ -90,26 +90,26 @@ contract HumanitarianTransfer {
     voucherIdCount = 0;
   }
 
-    /// @notice Requests for donation from UNICEF
-    /// @dev This does not return any excess ether sent to it
-    /// @param _name is the name of the IP requesting funds
-    /// @param _amount is the amount being requested
-    /// @param _partnerAccount is the account to which the funds are to be disbursed
-  function requestDonations(string memory _name, uint _amount, address _partnerAccount) public returns (bool) {
+    /// @notice Called when partners are requesting for donations from UNICEF. Initial state is pending.
+    /// @param _implementingPartnerName is the name of the Implementing Partner (IP) requesting funds.
+    /// @param _amount is the amount being requested for.
+    /// @param _partnerAccount is the account to which the funds are to be disbursed.
+    /// @dev Donation balance is the donation running balance useful when making fractional vouchers from he main funds donated. 
+  function requestDonations(string memory _implementingPartnerName, uint _amount, address _partnerAccount) public returns (bool) {
     donations[donationIdCount] = RequestDonation({
-      implementingPartner: _name, 
+      implementingPartner: _implementingPartnerName, 
       donationId: donationIdCount, 
       amount: _amount, 
       donationBalance: _amount,
       vouchersCount: 0,
       state: State.Pending, 
-      unicefAccount: payable(msg.sender), 
+      unicefAccount: payable(msg.sender), //Account should be predefined
       partnerAccount: payable(_partnerAccount)
      });
     
     donationIdCount ++;
 
-    emit LogRequestInitiliazed(donationIdCount);
+    emit LogRequestInitiliazed(donationIdCount,_implementingPartnerName, _amount );
     return true;
   }
 
@@ -124,11 +124,14 @@ contract HumanitarianTransfer {
     emit LogApproved(donationId, approver);
   }
 
-    /// @notice Issue voucher to beneficiary. Each voucher is a fraction of the total donation and the number of total fractions is incremented per each issuance
-    /// @param _beneficiaryName is the name of the Beneficiaty requesting funds
-    /// @param _amount is the amount being requested
-    /// @dev checks if the donation further breakdown is still valid. That is the account still funded
-    /// @dev the mecharnt account is the same as the partner accont becuase the voucher has not been used yet.
+    /// @notice The beneficiaries are not given money but rather are issued a voucher to use 
+    /* when purchasing to verified merchants. Each voucher is a fraction of the total donation and the
+     * number of total fractions is incremented per each issuance 
+     */
+    /// @param _beneficiaryName is the name of the Beneficiaty given the voucher
+    /// @param _amount is the worth of the voucher issued. 
+    /// @dev checks if the donation further breakdown is still valid. That is the account still funded (current balance - voucher worth).
+    /// @dev the merchant account is the same as the partner accont because the voucher has not been used yet.
     function issueVoucher(uint donationId, string memory _beneficiaryName, uint _amount) public approved(donationId) checkVoucherLimits(donationId, _amount) {
       vouchers[voucherIdCount] = Voucher({
         issuerName: donations[donationId].implementingPartner, 
