@@ -66,7 +66,7 @@ contract HumanitarianTransfer {
     _;
     uint _amount = donations[_donationId].amount;
     uint amountToRefund = msg.value - _amount;
-    donations[_donationId].unicefSuspenseAccount.transfer(amountToRefund);
+    // donations[_donationId].unicefSuspenseAccount.transfer(amountToRefund);
   }
 
   modifier approval(uint _donationId) {
@@ -119,6 +119,7 @@ contract HumanitarianTransfer {
     /// @param approver the Unicef individual who will have approved the donation
     /// @dev refunds excess any funds to the unicef suspence account. 
   function approveRequest(uint donationId, string memory approver) public payable approval(donationId) checkValue(donationId){
+    donations[donationId].unicefSuspenseAccount = payable(msg.sender);
     donations[donationId].partnerAccount.transfer(donations[donationId].amount);
     donations[donationId].state = State.Approved;
     emit LogApproved(donationId, approver);
