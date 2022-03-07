@@ -12,7 +12,7 @@ contract HumanitarianTransfer {
   uint public voucherIdCount;
   mapping (uint => RequestDonation) public donations ;
   mapping (uint => Voucher) public vouchers ;
-  mapping (address => uint) public merchantBalance ;
+  mapping (address => uint) public merchantWalletBalance ;
   
   /// @notice These are states that describe the progress of each voucher or funds issued.
   enum State{ Pending, Approved, Rejected, VoucherIsued, Used, Redeemed }
@@ -25,7 +25,7 @@ contract HumanitarianTransfer {
     uint donationBalance;
     uint vouchersCount;
     State state;
-    address payable unicefAccount;
+    address payable unicefSuspenseAccount;
     address payable partnerAccount;
   }
 
@@ -43,7 +43,7 @@ contract HumanitarianTransfer {
 
   event LogRequestInitiliazed(uint donationId, string _implementingPartnerName, uint amount);
   event LogApproved(uint donationId, string approver);
-  event LogVoucherIssued(uint voucherIdCount);
+  event LogVoucherIssued(uint voucherIdCount, string beneficiaryname);
   event LogUsed(uint voucherId);
   event LogRedeemd(uint voucherId);
 
@@ -64,9 +64,9 @@ contract HumanitarianTransfer {
 
   modifier checkValue(uint _donationId) {
     _;
-    uint _price = donations[_donationId].amount;
-    uint amountToRefund = msg.value - _price;
-    donations[_donationId].partnerAccount.transfer(amountToRefund);
+    uint _amount = donations[_donationId].amount;
+    uint amountToRefund = msg.value - _amount;
+    donations[_donationId].unicefSuspenseAccount.transfer(amountToRefund);
   }
 
   modifier approval(uint _donationId) {
@@ -84,7 +84,7 @@ contract HumanitarianTransfer {
     _;
   }
 
-  constructor() public {
+  constructor() {
     owner = msg.sender;
     donationIdCount = 0;
     voucherIdCount = 0;
@@ -95,6 +95,7 @@ contract HumanitarianTransfer {
     /// @param _amount is the amount being requested for.
     /// @param _partnerAccount is the account to which the funds are to be disbursed.
     /// @dev Donation balance is the donation running balance useful when making fractional vouchers from he main funds donated. 
+    /// @dev I did not use the msg.sender as the partner account incase the partner has a seperate account to the funds into
   function requestDonations(string memory _implementingPartnerName, uint _amount, address _partnerAccount) public returns (bool) {
     donations[donationIdCount] = RequestDonation({
       implementingPartner: _implementingPartnerName, 
@@ -103,9 +104,9 @@ contract HumanitarianTransfer {
       donationBalance: _amount,
       vouchersCount: 0,
       state: State.Pending, 
-      unicefAccount: payable(msg.sender), //Account should be predefined
+      unicefSuspenseAccount: payable(owner),
       partnerAccount: payable(_partnerAccount)
-     });
+    });
     
     donationIdCount ++;
 
@@ -114,11 +115,10 @@ contract HumanitarianTransfer {
   }
 
     /// @notice Approve request and transfers funds to IP provided and verified account
-    /// @dev emits the approver 
     /// @param donationId the id for the donation to be approved you want to withdraw
     /// @param approver the Unicef individual who will have approved the donation
+    /// @dev refunds excess any funds to the unicef suspence account. 
   function approveRequest(uint donationId, string memory approver) public payable approval(donationId) checkValue(donationId){
-    donations[donationId].unicefAccount = payable(msg.sender);
     donations[donationId].partnerAccount.transfer(donations[donationId].amount);
     donations[donationId].state = State.Approved;
     emit LogApproved(donationId, approver);
@@ -148,10 +148,10 @@ contract HumanitarianTransfer {
       donations[donationId].vouchersCount = donations[donationId].vouchersCount++;
       
       voucherIdCount ++;
-      emit LogVoucherIssued(voucherIdCount);
+      emit LogVoucherIssued(voucherIdCount,_beneficiaryName );
     }
 
-    /// @notice the beneficiary buys using their given voucher id to merchant. this transfers the voucher to merchant but no money is disbursed.
+    /// @notice the beneficiary buys using their given voucher id to merchant. this transfers the voucher to merchant but no money is disbursed yet.
     /// @param voucherId is the voucher id
     /// @param _merchantName is the name of the merchant receiving the payment
     /// @param _merchantAccount is the merchant account number receiving the payment
@@ -171,22 +171,24 @@ contract HumanitarianTransfer {
       require(vouchers[voucherId].state == State.Used);
 
       vouchers[voucherId].merchantAccount = payable(msg.sender);
-      merchantBalance[vouchers[voucherId].merchantAccount] +=  vouchers[voucherId].amount;
+      merchantWalletBalance[vouchers[voucherId].merchantAccount] +=  vouchers[voucherId].amount;
       donations[vouchers[voucherId].donationId].amount -=  vouchers[voucherId].amount;
 
+      vouchers[voucherId].merchantAccount.transfer(vouchers[voucherId].amount); //Use trnasfer from
+      
       vouchers[voucherId].state = State.Redeemed;
       emit LogRedeemd(voucherId);
     }
 
    function fetchDonations(uint _donationId) public view  
-     returns (string memory implementingPartner, uint donationId, uint amount, uint state, address unicefAccount, address partnerAccount)  
+     returns (string memory implementingPartner, uint donationId, uint amount, uint state, address unicefSuspenseAccount, address partnerAccount)  
    { 
      implementingPartner = donations[_donationId].implementingPartner; 
      donationId = donations[_donationId].donationId; 
      amount = donations[_donationId].amount; 
      state = uint(donations[_donationId].state); 
-     unicefAccount = donations[_donationId].unicefAccount; 
+     unicefSuspenseAccount = donations[_donationId].unicefSuspenseAccount; 
      partnerAccount = donations[_donationId].partnerAccount; 
-     return (implementingPartner, donationId, amount, state, unicefAccount, partnerAccount); 
+     return (implementingPartner, donationId, amount, state, unicefSuspenseAccount, partnerAccount); 
    } 
 }
