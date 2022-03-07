@@ -1,7 +1,7 @@
 //var SimpleBank = artifacts.require("./SimpleBank.sol");
-var SupplyChain = artifacts.require("./SupplyChain.sol");
+var HumanitarianTransfer = artifacts.require("./HumanitarianTransfer.sol");
 
 module.exports = function(deployer) {
   //deployer.deploy(SimpleBank);
-  deployer.deploy(SupplyChain);
+  deployer.deploy(HumanitarianTransfer);
 };

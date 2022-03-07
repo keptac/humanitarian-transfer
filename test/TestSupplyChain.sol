@@ -2,9 +2,9 @@ pragma solidity ^0.8.0;
 
 import "truffle/Assert.sol";
 import "truffle/DeployedAddresses.sol";
-import "../contracts/SupplyChain.sol";
+import "../contracts/HumanitarianTransfer.sol";
 
-contract TestSupplyChain {
+contract TestHumanitarianTransfer {
 
     // Test for failing conditions in this contracts:
     // https://truffleframework.com/tutorials/testing-for-throws-in-solidity-tests

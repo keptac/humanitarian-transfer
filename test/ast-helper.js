@@ -2,7 +2,7 @@
 
 // 
 const CDTYPE = "ContractDefinition";
-const CNAME = "SupplyChain";
+const CNAME = "HumanitarianTransfer";
 const contractDefn = ca =>
   ca.ast.nodes.find(n => n.nodeType === CDTYPE && n.name === CNAME);
 
