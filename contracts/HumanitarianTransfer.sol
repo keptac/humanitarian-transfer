@@ -45,7 +45,7 @@ contract HumanitarianTransfer {
   event LogApproved(uint donationId, string approver);
   event LogVoucherIssued(uint voucherIdCount, string beneficiaryname);
   event LogUsed(uint voucherId);
-  event LogRedeemd(uint voucherId);
+  event VoucherRedeemed(uint voucherId, string beneficiaryname);
 
   modifier isOwner(){
     require(msg.sender == owner);
@@ -157,7 +157,7 @@ contract HumanitarianTransfer {
     /// @param _merchantName is the name of the merchant receiving the payment
     /// @param _merchantAccount is the merchant account number receiving the payment
     /// @dev money is only transfered on redeem
-    function useVoucher(uint voucherId, string memory _merchantName, address _merchantAccount) public{
+    function useVoucher(uint voucherId, string memory _merchantName, address _merchantAccount) public {
       require(vouchers[voucherId].state == State.VoucherIsued);
       vouchers[voucherId].beneficiaryName = _merchantName;
       vouchers[voucherId].merchantAccount = payable(_merchantAccount);
@@ -178,11 +178,11 @@ contract HumanitarianTransfer {
       vouchers[voucherId].merchantAccount.transfer(vouchers[voucherId].amount); //Use trnasfer from
       
       vouchers[voucherId].state = State.Redeemed;
-      emit LogRedeemd(voucherId);
+      emit VoucherRedeemed(voucherId, vouchers[voucherId].beneficiaryName);
     }
 
    function fetchDonations(uint _donationId) public view  
-     returns (string memory implementingPartner, uint donationId, uint amount, State state, address unicefSuspenseAccount, address partnerAccount)  
+     returns (string memory implementingPartner, uint donationId, uint amount, State state, address unicefSuspenseAccount, address partnerAccount, uint donationBalance, uint vouchersCount)  
    { 
      implementingPartner = donations[_donationId].implementingPartner; 
      donationId = donations[_donationId].donationId; 
@@ -190,6 +190,22 @@ contract HumanitarianTransfer {
      state = donations[_donationId].state; 
      unicefSuspenseAccount = donations[_donationId].unicefSuspenseAccount; 
      partnerAccount = donations[_donationId].partnerAccount; 
-     return (implementingPartner, donationId, amount, state, unicefSuspenseAccount, partnerAccount); 
+     donationBalance = donations[_donationId].donationBalance;
+     vouchersCount = donations[_donationId].vouchersCount;
+     return (implementingPartner, donationId, amount, state, unicefSuspenseAccount, partnerAccount, donationBalance, vouchersCount ); 
    } 
+
+   function fetchVouchers(uint _voucherId) public view  
+   returns (string memory issuerName, string memory beneficiaryName, uint donationId,uint voucherId, uint amount, State state, address merchantAccount, address partnerAccount, uint donationBalance, uint vouchersCount)  
+ { 
+   issuerName = vouchers[_voucherId].issuerName; 
+   beneficiaryName = vouchers[_voucherId].beneficiaryName; 
+   donationId = vouchers[_voucherId].donationId; 
+   voucherId = vouchers[_voucherId].voucherId; 
+   amount = vouchers[_voucherId].amount; 
+   state = vouchers[_voucherId].state; 
+   partnerAccount = vouchers[_voucherId].partnerAccount;
+   merchantAccount = vouchers[_voucherId].merchantAccount;
+   return (issuerName, beneficiaryName,donationId,voucherId, amount, state, merchantAccount, partnerAccount, donationBalance, vouchersCount ); 
+ } 
 }

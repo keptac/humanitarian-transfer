@@ -3,6 +3,8 @@
 The Humanitarian Transfers directory is a truffle project that contains the required
 contract, migration and test files.
 
+## Video Walkthtough
+- [Video Demo](https://streamable.com/g7x8h9)
 ## DEPENDENCIES AND COMMANDS - INSTRUCTIONS
 
 ```

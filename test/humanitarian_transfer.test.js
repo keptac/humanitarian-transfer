@@ -122,8 +122,6 @@ contract("HumanitarianTransfer", function (accounts) {
 
       const result = await instance.fetchDonations.call(0);
 
-      console.log(result[0]);
-
       assert.equal(
         result[0],
         implementingPartner,
@@ -212,31 +210,25 @@ contract("HumanitarianTransfer", function (accounts) {
       assert.equal(eventEmitted, true, "adding an donation should emit a Approved event");
     });
 
-    it("should revert when someone that is not the seller tries to call issueVouchers()", async () => {
-      await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: amount });
-      await catchRevert(instance.issueVouchers(0, { from: partnerAccount }));
-    });
-
-    it("should allow the seller to mark the donation as issued", async () => {
+    it("should allow the Partner to mark the donation as issued", async () => {
       await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
       await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
-      await instance.issueVouchers(0, { from: unicefSuspenseAccount });
+      await instance.issueVoucher(0, 'Keith Chelenje',200);
 
-      const result = await instance.fetchDonations.call(0);
-
+      const result = await instance.fetchVouchers.call(0);
       assert.equal(
-        result[3].toString(10),
+        result[5].toString(10),
         HumanitarianTransfer.State.VoucherIsued,
         'the state of the donation should be "VoucherIsued"',
       );
+
     });
 
     it("should emit a LogVoucherIssued event when an donation is issued", async () => {
       var eventEmitted = false;
       await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
       await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
-      const tx = await instance.issueVouchers(0, { from: unicefSuspenseAccount });
+      const tx = await instance.issueVoucher(0, 'Keith Chelenje',200);
 
       if (tx.logs[0].event == "LogVoucherIssued") {
         eventEmitted = true;
@@ -252,45 +244,47 @@ contract("HumanitarianTransfer", function (accounts) {
     it("should allow the beneficiary to mark the donation as used by beneficiary", async () => {
       await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
       await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
-      await instance.issueVouchers(0, { from: unicefSuspenseAccount });
-      await instance.useVoucher(0, { from: partnerAccount });
+      await instance.issueVoucher(0, 'Keith Chelenje',200);
+      await instance.useVoucher(0, 'Keith Chelenje',merchantAccount);
 
-      const result = await instance.fetchDonations.call(0);
+      const result = await instance.fetchVouchers.call(0);
 
       assert.equal(
-        result[3].toString(10),
-        HumanitarianTransfer.State.Received,
-        'the state of the donation should be "Received"',
+        result[5].toString(10),
+        HumanitarianTransfer.State.Used,
+        'the state of the donation should be "Used"',
+      );
+      assert.equal(
+        result[1].toString(10),
+        "Keith Chelenje",
+        'Merchant name should be Keith Chelenje',
       );
     });
 
-    it("should revert if an address other than the beneficiary calls useVoucher()", async () => {
-      await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
-      await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
-      await instance.issueVouchers(0, { from: unicefSuspenseAccount });
-
-      await catchRevert(instance.useVoucher(0, { from: unicefSuspenseAccount }));
-    });
-
-    it("should emit a LogReceived event when an donation is received", async () => {
+    it("should emit a VoucherRedeemed event when an donation is received", async () => {
       var eventEmitted = false;
 
       await instance.requestDonations(implementingPartner, amount, partnerAccount, { from: unicefSuspenseAccount });
       await instance.approveRequest(0, 'Kelvin Chelenje', { from: partnerAccount, value: excessAmount });
-      await instance.issueVouchers(0, { from: unicefSuspenseAccount });
-      const tx = await instance.useVoucher(0, { from: partnerAccount });
+      await instance.issueVoucher(0, 'Keith Chelenje',200);
+      await instance.useVoucher(0, 'Keith Chelenje',merchantAccount);
+      const tx = await instance.redeemVoucher(0);
 
-      if (tx.logs[0].event == "LogReceived") {
+      if (tx.logs[0].event == "VoucherRedeemed") {
         eventEmitted = true;
       }
 
       assert.equal(
+        tx.logs[0].args[1],
+        "Keith Chelenje",
+        "The redeemer should be Keith Chelenje",
+      );
+
+      assert.equal(
         eventEmitted,
         true,
-        "adding an donation should emit a VoucherIsued event",
+        "adding an donation should emit a VoucherRedeemed event",
       );
     });
-
   });
-
 });
