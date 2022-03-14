@@ -5,6 +5,10 @@ contract, migration and test files.
 
 ## Video Walkthtough
 - [Video Demo](https://streamable.com/g7x8h9)
+
+## Screenshot for tests
+![Tests results](./tests_screenshot.png)
+
 ## DEPENDENCIES AND COMMANDS - INSTRUCTIONS
 
 ```
